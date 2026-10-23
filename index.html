@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>موقع تقييم بيت التطوع جامعة مدينة دمنهور</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0b1b3a;--blue:#1f6fd1;--gold:#f2a33a;--bg:#f3f6fb;--card:#fff;--line:#dbe3ef;--tx:#17223b;--mut:#5d6b86;--bad:#d64545}
+@media(prefers-color-scheme:dark){:root{--bg:#0a1226;--card:#101c38;--line:#22325a;--tx:#e8eefb;--mut:#9fb0d1}}
+*{box-sizing:border-box}
+body{margin:0;font:400 16px/1.7 Cairo,Tahoma,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--ink);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:3px solid var(--gold)}
+header img{width:56px;height:56px;border-radius:50%}
+header h1{font-size:1rem;font-weight:800;margin:0;flex:1}
+main{flex:1;padding:20px 14px}
+footer{text-align:center;color:var(--mut);font-size:.85rem;padding:14px}
+.wrap{max-width:900px;margin:auto;display:grid;gap:14px}
+.wide{max-width:1300px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:8px;padding:8px 14px;background:var(--blue);color:#fff;font-weight:600}
+button.g{background:transparent;border:1px solid var(--line);color:var(--tx)}
+header button.g{color:#fff;border-color:#ffffff66}
+input,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.login{max-width:400px;margin:24px auto;text-align:center}
+.login img{width:130px;height:130px;border-radius:50%}
+.tabs{display:flex;gap:6px;margin:14px 0}
+.tabs button{flex:1;background:transparent;color:var(--tx);border:1px solid var(--line)}
+.tabs .on{background:var(--blue);color:#fff;border-color:var(--blue)}
+form{display:grid;gap:10px;text-align:right}
+.err{color:var(--bad);min-height:1.5em;margin:0}
+.mut{color:var(--mut);margin:0}
+.hero{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center}
+.hero h2{margin:0;font-size:1.6rem}
+.stats{display:flex;gap:10px}
+.stats div{background:var(--bg);border-radius:10px;padding:10px 18px;text-align:center}
+.stats b{display:block;font-size:2rem;line-height:1.3;color:var(--blue)}
+.stats span{font-size:.8rem;color:var(--mut)}
+.row{display:grid;grid-template-columns:160px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.bar{height:10px;background:var(--bg);border-radius:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue)}
+@media(max-width:560px){.row{grid-template-columns:1fr auto}.row .bar{grid-column:1/-1;order:3}}
+.tw{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:6px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+th{background:var(--ink);color:#fff;font-weight:600}
+td input{width:62px;text-align:center;padding:5px}
+td input.note{width:150px;text-align:right}
+td.nm{text-align:right;min-width:170px}
+td.nm small{display:block;color:var(--mut)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tools input[type=search]{max-width:220px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--tx);max-width:540px;width:92%}
+dialog textarea{height:150px;direction:ltr;font:.85rem monospace}
+#toast{position:fixed;bottom:18px;inset-inline:0;margin:auto;width:max-content;max-width:90%;background:var(--ink);color:#fff;padding:8px 16px;border-radius:8px}
+</style>
+</head>
+<body>
+<header>
+<img id="hl" alt="شعار بيت التطوع">
+<h1>موقع تقييم بيت التطوع جامعة مدينة دمنهور</h1>
+<button id="out" class="g" hidden onclick="logout()">تسجيل الخروج</button>
+</header>
+<main id="app"></main>
+<footer>بيت التطوع - جامعة مدينة دمنهور</footer>
+<div id="toast" hidden></div>
+<dialog id="dlg">
+<h3 style="margin-top:0">بيانات الدخول</h3>
+<p class="mut">كل سطر: الاسم، رقم التسجيل، كلمة المرور. انسخها الآن وأرسلها لكل عضو، فكلمة المرور لا تظهر مرة أخرى (يمكنك توليد كلمة جديدة بزر 🔑).</p>
+<textarea id="dc" readonly></textarea>
+<p class="tools"><button onclick="navigator.clipboard.writeText($('#dc').value).then(()=>this.textContent='تم النسخ ✓')">نسخ</button><button class="g" onclick="$('#dlg').close()">إغلاق</button></p>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.12.2/firebase-firestore-compat.min.js"></script>
+<script>
+const LOGO="data:image/jpeg;base64,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";
+/* لمشاركة البيانات بين الأجهزة: الصق هنا إعدادات Firebase بدل null، مثال: {apiKey:"...",authDomain:"...",projectId:"..."} */
+const FB=null;
+/* الدرجات القصوى لكل بند (مجموعها 100 كما في ملف الإكسل). عدّل الأرقام كما تريد */
+const CRIT=[["حضور الندوات",15],["التفاعل على السوشيال",15],["حضور توعية",15],["حضور سيشن",15],["عمل سيشن",15],["المادة العلمية",15],["التعامل والمظهر",10]];
+const MAXT=CRIT.reduce((a,c)=>a+c[1],0);
+let DB={members:[],admins:[]},S=null,db=null,ERR='';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nd=s=>s.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+const H=async p=>{if(!(window.crypto&&crypto.subtle))return'p:'+p;const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('bt:'+p));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')};
+const pw=()=>{const a='abcdefghjkmnpqrstuvwxyz23456789';return Array.from(crypto.getRandomValues(new Uint8Array(7)),x=>a[x%a.length]).join('')};
+const newId=()=>{let i;do i=String(10000+Math.floor(Math.random()*90000));while(DB.members.some(m=>m.id===i));return i};
+const fm=id=>DB.members.find(m=>m.id===id);
+const tot=m=>m.s.some(v=>v!=null)?m.s.reduce((a,v)=>a+(+v||0),0):null;
+const gpa=t=>(Math.round(t/MAXT*500)/100).toFixed(2);
+const rank=m=>{const t=tot(m);return t==null?'':1+DB.members.filter(o=>{const x=tot(o);return x!=null&&x>t}).length};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(t.k);t.k=setTimeout(()=>t.hidden=true,3500)};
+
+async function save(){const j=JSON.stringify(DB);try{if(db)await db.set({json:j});else localStorage.setItem('bt_db',j)}catch(e){toast('تعذر الحفظ: '+e.message)}}
+
+async function init(){
+ $('#hl').src=LOGO;
+ const l=document.createElement('link');l.rel='icon';l.href=LOGO;document.head.append(l);
+ try{S=JSON.parse(sessionStorage.getItem('bt_s'))}catch(e){}
+ if(FB&&typeof firebase!=='undefined'){
+  try{
+   firebase.initializeApp(FB);db=firebase.firestore().collection('app').doc('data');
+   const s=await db.get();if(s.exists)DB=JSON.parse(s.data().json);
+   db.onSnapshot(s=>{if(s.exists){DB=JSON.parse(s.data().json);if(!document.activeElement.matches('input,textarea'))render()}});
+  }catch(e){db=null;toast('تعذر الاتصال بـ Firebase، سيُستخدم التخزين المحلي')}
+ }
+ if(!db)try{DB=JSON.parse(localStorage.getItem('bt_db'))||DB}catch(e){}
+ if(!DB.admins.length){DB.admins=[{u:'admin',p:await H('admin123')}];await save()}
+ render();
+}
+
+function render(){
+ if(S){const ok=S.role=='admin'?DB.admins.some(a=>a.u==S.id):DB.members.some(m=>m.id==S.id);if(!ok)S=null}
+ $('#out').hidden=!S;
+ $('#app').innerHTML=!S?loginView():S.role=='admin'?adminView():memberView(fm(S.id));
+}
+function logout(){S=null;try{sessionStorage.removeItem('bt_s')}catch(e){}render()}
+async function go(){
+ const u=nd($('#u').value.trim()),p=await H($('#p').value);
+ const role=DB.admins.some(a=>a.u===u&&a.p===p)?'admin':DB.members.some(m=>m.id===u&&m.p===p)?'member':null;
+ if(!role){ERR='اسم المستخدم أو كلمة المرور غير صحيحة';$('.err').textContent=ERR;return}
+ ERR='';S={role,id:u};try{sessionStorage.setItem('bt_s',JSON.stringify(S))}catch(e){}render();
+}
+
+const loginView=()=>`<div class="card login"><img src="${LOGO}" alt="شعار بيت التطوع"><h2>تسجيل الدخول</h2>
+<p class="mut">الأعضاء: رقم التسجيل وكلمة المرور. المسؤولون: اسم المستخدم وكلمة المرور.</p>
+<div style="display:grid;gap:10px;margin-top:14px;text-align:right"><input id="u" placeholder="رقم التسجيل أو اسم المستخدم" autocomplete="username" onkeydown="if(event.key==='Enter')$('#p').focus()"><input id="p" type="password" placeholder="كلمة المرور" autocomplete="current-password" onkeydown="if(event.key==='Enter')go()"><p class="err">${ERR}</p><button type="button" onclick="go()">دخول</button></div></div>`;
+
+function memberView(m){
+ const t=tot(m),r=rank(m),n=DB.members.filter(o=>tot(o)!=null).length;
+ return `<section class="wrap">
+<div class="card hero"><div><p class="mut">أهلاً بك</p><h2>${esc(m.n)}</h2><p class="mut">رقم التسجيل: <b>${m.id}</b></p></div>
+<div class="stats"><div><b>${t??'—'}</b><span>من ${MAXT}</span></div><div><b>${t==null?'—':gpa(t)}</b><span>المعدل من 5</span></div><div><b>${r||'—'}</b><span>الترتيب من ${n}</span></div></div></div>
+<div class="card">${CRIT.map((c,i)=>{const v=m.s[i];return `<div class="row"><span>${c[0]}</span><div class="bar"><i style="width:${v==null?0:v/c[1]*100}%"></i></div><b>${v==null?'—':v} / ${c[1]}</b></div>`}).join('')}</div>
+${m.note?`<div class="card"><b>ملحوظة المسؤول</b><p>${esc(m.note)}</p></div>`:''}
+${t==null?'<p class="mut">لم يتم رصد درجاتك بعد. ستظهر هنا بمجرد أن يضيفها المسؤول.</p>':''}
+</section>`;
+}
+
+function adminView(){
+ const n=DB.members.length;
+ const rows=DB.members.map(m=>{const t=tot(m);return `<tr data-id="${m.id}" data-n="${esc(m.n)} ${m.id}"><td class="nm">${esc(m.n)}<small>${m.id}</small></td>${CRIT.map((c,i)=>`<td><input type="number" min="0" max="${c[1]}" step="any" value="${m.s[i]??''}" onchange="setS('${m.id}',${i},this)"></td>`).join('')}<td class="tt">${t??''}</td><td class="gp">${t==null?'':gpa(t)}</td><td class="rk">${rank(m)}</td><td><input class="note" value="${esc(m.note||'')}" onchange="setN('${m.id}',this.value)"></td><td><button class="g" title="كلمة مرور جديدة" onclick="rp('${m.id}')">🔑</button> <button class="g" title="حذف" onclick="del('${m.id}')">🗑</button></td></tr>`}).join('');
+ return `<div class="wrap wide">
+${FB?'':'<div class="card" style="border-color:var(--gold)">⚠ التخزين الحالي محلي: البيانات تُحفظ في هذا المتصفح فقط. لمشاركتها مع بقية المسؤولين والأعضاء على أجهزتهم فعّل Firebase (راجع الشرح).</div>'}
+<div class="card"><h3 style="margin-top:0">إضافة أعضاء</h3>
+<textarea id="nn" rows="2" placeholder="اكتب اسم العضو (أو عدة أسماء، كل اسم في سطر)"></textarea>
+<p style="margin-bottom:0"><button onclick="addM()">إضافة وتوليد رقم التسجيل</button></p></div>
+<div class="card"><div class="tools"><b>الأعضاء (${n})</b><input type="search" placeholder="بحث بالاسم أو الرقم" oninput="flt(this.value)"><span style="flex:1"></span><button class="g" onclick="csv()">تصدير إلى Excel</button><button class="g" onclick="bk()">نسخة احتياطية</button><button class="g" onclick="$('#rf').click()">استعادة نسخة</button><input id="rf" type="file" accept=".json" hidden onchange="rs(this)"></div>
+<div class="tw"><table><thead><tr><th>الاسم</th>${CRIT.map(c=>`<th>${c[0]}<br><small>من ${c[1]}</small></th>`).join('')}<th>المجموع</th><th>المعدل</th><th>الترتيب</th><th>ملحوظة</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+${n?'':'<p class="mut">لا يوجد أعضاء بعد. أضف أول اسم من الأعلى.</p>'}</div>
+<div class="card"><h3 style="margin-top:0">حسابات المسؤولين</h3><p class="mut">الحالي: ${DB.admins.map(a=>esc(a.u)).join('، ')}. اكتب اسمًا جديدًا لإضافة مسؤول، أو اسمًا موجودًا لتغيير كلمة مروره (6 أحرف على الأقل).</p>
+<div class="tools" style="margin-top:10px"><input id="au" placeholder="اسم المستخدم" style="max-width:200px"><input id="ap" type="password" placeholder="كلمة المرور" style="max-width:200px"><button onclick="addA()">حفظ</button></div></div></div>`;
+}
+
+function calc(){DB.members.forEach(m=>{const r=document.querySelector(`tr[data-id="${m.id}"]`);if(!r)return;const t=tot(m);r.querySelector('.tt').textContent=t??'';r.querySelector('.gp').textContent=t==null?'':gpa(t);r.querySelector('.rk').textContent=rank(m)})}
+function setS(id,i,el){const v=el.value===''?null:Math.min(CRIT[i][1],Math.max(0,+el.value));el.value=v??'';fm(id).s[i]=v;calc();save()}
+function setN(id,v){fm(id).note=v;save()}
+function flt(q){q=q.trim();document.querySelectorAll('tbody tr').forEach(r=>r.hidden=!r.dataset.n.includes(q))}
+function creds(a){$('#dc').value=a.map(x=>x.join('\t')).join('\n');$('#dlg').showModal()}
+async function addM(){
+ const ns=$('#nn').value.split('\n').map(x=>x.trim()).filter(Boolean);
+ if(!ns.length)return toast('اكتب اسمًا واحدًا على الأقل');
+ const out=[];
+ for(const n of ns){const p=pw(),id=newId();DB.members.push({id,n,p:await H(p),s:Array(CRIT.length).fill(null),note:''});out.push([n,id,p])}
+ await save();render();creds(out);
+}
+async function rp(id){const m=fm(id),p=pw();m.p=await H(p);await save();creds([[m.n,id,p]])}
+async function del(id){const m=fm(id);if(confirm('حذف '+m.n+' نهائيًا؟')){DB.members=DB.members.filter(x=>x!==m);await save();render()}}
+async function addA(){
+ const u=$('#au').value.trim(),p=$('#ap').value;
+ if(!u||p.length<6)return toast('اكتب اسم مستخدم وكلمة مرور من 6 أحرف على الأقل');
+ const h=await H(p),a=DB.admins.find(x=>x.u===u);
+ if(a)a.p=h;else DB.admins.push({u,p:h});
+ await save();render();toast('تم الحفظ');
+}
+function dl(t,n,y){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:y+';charset=utf-8'}));a.download=n;a.click()}
+function csv(){
+ const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+ const h=['رقم التسجيل','الاسم',...CRIT.map(c=>c[0]),'المجموع','المعدل','الترتيب','ملحوظة'];
+ const r=DB.members.map(m=>{const t=tot(m);return[m.id,m.n,...m.s,t,t==null?'':gpa(t),rank(m),m.note||''].map(q).join(',')});
+ dl('\ufeff'+[h.map(q).join(','),...r].join('\r\n'),'تقييم-الأعضاء.csv','text/csv');
+}
+const bk=()=>dl(JSON.stringify(DB),'backup.json','application/json');
+function rs(el){const f=el.files[0];if(!f)return;f.text().then(async t=>{try{const d=JSON.parse(t);if(!Array.isArray(d.members)||!Array.isArray(d.admins))throw 0;DB=d;await save();render();toast('تمت الاستعادة')}catch(e){toast('ملف غير صالح')}})}
+init();
+</script>
+</body>
+</html>
