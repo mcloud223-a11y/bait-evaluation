@@ -43,10 +43,14 @@ form{display:grid;gap:10px;text-align:right}
 .bar{height:10px;background:var(--bg);border-radius:9px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--blue)}
 @media(max-width:560px){.row{grid-template-columns:1fr auto}.row .bar{grid-column:1/-1;order:3}}
-.tw{overflow-x:auto;margin-top:10px}
-table{border-collapse:collapse;width:100%;font-size:.9rem}
+.tw{overflow:auto;max-height:80vh;margin-top:10px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:.9rem}
 th,td{padding:6px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
-th{background:var(--ink);color:#fff;font-weight:600}
+th{background:var(--ink);color:#fff;font-weight:600;position:sticky;top:0;z-index:2}
+.c1{right:0;width:44px;min-width:44px;max-width:44px}
+.c2{right:44px}
+td.c1,td.c2{position:sticky;background:var(--card);z-index:1}
+th.c1,th.c2{z-index:3}
 td input{width:62px;text-align:center;padding:5px}
 td input.note{width:150px;text-align:right}
 td.nm{text-align:right;min-width:170px}
@@ -102,9 +106,11 @@ const H=async p=>{if(!(window.crypto&&crypto.subtle))return'p:'+p;const b=await 
 const pw=()=>{const a='abcdefghjkmnpqrstuvwxyz23456789';return Array.from(crypto.getRandomValues(new Uint8Array(7)),x=>a[x%a.length]).join('')};
 const newId=()=>{let i;do i=String(10000+Math.floor(Math.random()*90000));while(DB.members.some(m=>m.id===i));return i};
 const fm=id=>DB.members.find(m=>m.id===id);
-const tot=m=>m.s.some(v=>v!=null)?m.s.reduce((a,v)=>a+(+v||0),0):null;
+const tot=m=>m.s.some(v=>v!=null)?Math.round(m.s.reduce((a,v)=>a+(+v||0),0)*100)/100:null;
 const gpa=t=>(Math.round(t/MAXT*500)/100).toFixed(2);
-const rank=m=>{const t=tot(m);return t==null?'':1+DB.members.filter(o=>{const x=tot(o);return x!=null&&x>t}).length};
+/* الترتيب: المجاميع المتساوية تأخذ نفس الترتيب، والمجموع الذي يليها يأخذ الرقم التالي مباشرة (1،2،2،3،4...) */
+const rank=m=>{const t=tot(m);return t==null?'':1+new Set(DB.members.map(tot).filter(x=>x!=null&&x>t)).size};
+const byName=(a,b)=>a.n.localeCompare(b.n,'ar',{sensitivity:'base',numeric:true})||a.id.localeCompare(b.id);
 const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(t.k);t.k=setTimeout(()=>t.hidden=true,3500)};
 
 /* ترحيل البيانات القديمة (7 بنود): حذف عمود «حضور سيشن» القديم (الرابع) مع إبقاء بقية الدرجات في أماكنها */
@@ -158,14 +164,14 @@ ${t==null?'<p class="mut">لم يتم رصد درجاتك بعد. ستظهر ه�
 
 function adminView(){
  const n=DB.members.length;
- const rows=DB.members.map(m=>{const t=tot(m);return `<tr data-id="${m.id}" data-n="${esc(m.n)} ${m.id}"><td class="nm">${esc(m.n)}<small>${m.id}</small></td>${CRIT.map((c,i)=>`<td><input type="number" min="0" max="${c[1]}" step="any" value="${m.s[i]??''}" onchange="setS('${m.id}',${i},this)"></td>`).join('')}<td class="tt">${t??''}</td><td class="gp">${t==null?'':gpa(t)}</td><td class="rk">${rank(m)}</td><td><input class="note" value="${esc(m.note||'')}" onchange="setN('${m.id}',this.value)"></td><td><button class="g" title="كلمة مرور جديدة" onclick="rp('${m.id}')">🔑</button> <button class="g" title="حذف" onclick="del('${m.id}')">🗑</button></td></tr>`}).join('');
+ const rows=[...DB.members].sort(byName).map((m,k)=>{const t=tot(m);return `<tr data-id="${m.id}" data-n="${esc(m.n)} ${m.id}"><td class="c1">${k+1}</td><td class="nm c2">${esc(m.n)}<small>${m.id}</small></td>${CRIT.map((c,i)=>`<td><input type="number" min="0" max="${c[1]}" step="any" value="${m.s[i]??''}" onchange="setS('${m.id}',${i},this)"></td>`).join('')}<td class="tt">${t??''}</td><td class="gp">${t==null?'':gpa(t)}</td><td class="rk">${rank(m)}</td><td><input class="note" value="${esc(m.note||'')}" onchange="setN('${m.id}',this.value)"></td><td><button class="g" title="كلمة مرور جديدة" onclick="rp('${m.id}')">🔑</button> <button class="g" title="حذف" onclick="del('${m.id}')">🗑</button></td></tr>`}).join('');
  return `<div class="wrap wide">
 ${FB?'':'<div class="card" style="border-color:var(--gold)">⚠ التخزين الحالي محلي: البيانات تُحفظ في هذا المتصفح فقط. لمشاركتها مع بقية المسؤولين والأعضاء على أجهزتهم فعّل Firebase (راجع الشرح).</div>'}
 <div class="card"><h3 style="margin-top:0">إضافة أعضاء</h3>
 <textarea id="nn" rows="2" placeholder="اكتب اسم العضو (أو عدة أسماء، كل اسم في سطر)"></textarea>
 <p style="margin-bottom:0"><button onclick="addM()">إضافة وتوليد رقم التسجيل</button></p></div>
 <div class="card"><div class="tools"><b>الأعضاء (${n})</b><input type="search" placeholder="بحث بالاسم أو الرقم" oninput="flt(this.value)"><span style="flex:1"></span><button class="g" onclick="csv()">تصدير إلى Excel</button><button class="g" onclick="bk()">نسخة احتياطية</button><button class="g" onclick="$('#rf').click()">استعادة نسخة</button><input id="rf" type="file" accept=".json" hidden onchange="rs(this)"></div>
-<div class="tw"><table><thead><tr><th>الاسم</th>${CRIT.map(c=>`<th>${c[0]}<br><small>من ${c[1]}</small></th>`).join('')}<th>المجموع</th><th>المعدل</th><th>الترتيب</th><th>ملحوظة</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+<div class="tw"><table><thead><tr><th class="c1">#</th><th class="c2">الاسم</th>${CRIT.map(c=>`<th>${c[0]}<br><small>من ${c[1]}</small></th>`).join('')}<th>المجموع</th><th>المعدل</th><th>الترتيب</th><th>ملحوظة</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
 ${n?'':'<p class="mut">لا يوجد أعضاء بعد. أضف أول اسم من الأعلى.</p>'}</div>
 <div class="card"><h3 style="margin-top:0">حسابات المسؤولين</h3><div class="chips">${DB.admins.map(a=>`<span class="chip">${esc(a.u)}${a.u===S.id?' <small class="mut">(أنت)</small>':`<button class="g" title="حذف هذا المسؤول" data-u="${esc(a.u)}" onclick="delA(this.dataset.u)">🗑</button>`}</span>`).join('')}</div>
 <p class="mut">لإضافة مسؤول اكتب اسماً جديداً وكلمة مرور، ولتغيير كلمة مرور مسؤول موجود اكتب اسمه وكلمة مرور جديدة (6 أحرف على الأقل).</p>
@@ -203,7 +209,7 @@ function dl(t,n,y){const a=document.createElement('a');a.href=URL.createObjectUR
 function csv(){
  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
  const h=['رقم التسجيل','الاسم',...CRIT.map(c=>c[0]),'المجموع','المعدل','الترتيب','ملحوظة'];
- const r=DB.members.map(m=>{const t=tot(m);return[m.id,m.n,...m.s,t,t==null?'':gpa(t),rank(m),m.note||''].map(q).join(',')});
+ const r=[...DB.members].sort(byName).map(m=>{const t=tot(m);return[m.id,m.n,...m.s,t,t==null?'':gpa(t),rank(m),m.note||''].map(q).join(',')});
  dl('\ufeff'+[h.map(q).join(','),...r].join('\r\n'),'تقييم-الأعضاء.csv','text/csv');
 }
 const bk=()=>dl(JSON.stringify(DB),'backup.json','application/json');
